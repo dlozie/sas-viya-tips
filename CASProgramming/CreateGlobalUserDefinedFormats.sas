@@ -6,8 +6,11 @@ Once the format is promoted for global use, it can be used in other sessions, in
 
 **/
 
+/* First we set up our CAS connection */
 cas casauto;
 caslib _ALL_ assign;
+
+/* These proc format steps create the SAS format catalogs that we will then push to CAS */
 proc format library=work.genfmts;
    value $codes
       "A" = "Alpha"
@@ -39,22 +42,33 @@ proc format library=work.mailfmts;
       "S" = "South";
 run;
 
+/* put our loading process into a macro for re-usability */
 %macro loadfmtCAS(lib, catname);
-proc format library=&lib..&catname. cntlout=&lib..&catname.;        /* 3 */
-run;
 
-proc print data=&lib..&catname.;                            /* 4 */
-   var FMTNAME START END LABEL;
-run;
+   /* First, we convert the format catalog into a SAS table */
+   proc format library=&lib..&catname. cntlout=&lib..&catname.;
+   run;
+   
+   /* optional - check the contents of the table */
+   proc print data=&lib..&catname.;
+      var FMTNAME START END LABEL;
+   run;
+   
+   /* this writes the sas format table to a cas format library for the session */
+   proc format cntlin=&lib..&catname. casfmtlib="&catname." 
+       sessref=casauto;  
+   run;
+   
+   /* optional - check the contents of the cas format library */
+   cas casauto listformat fmtlibname="&catname."     
+      members;
 
-proc format cntlin=&lib..&catname. casfmtlib="&catname."          /* 5 */
-    sessref=casauto;  
-run;
-cas casauto listformat fmtlibname="&catname."     
-   members;
-cas casauto savefmtlib fmtlibname=&catname.       
-   caslib=formats table=&catname. replace promote;
+   /* Save and promote the format library so it can be used globally by all CAS sessions */
+   cas casauto savefmtlib fmtlibname=&catname.       
+      caslib=formats table=&catname. replace promote;
+   
 %mend;
 
+/* run the macro for each format catalog we want to load */
 %loadfmtCAS(work, genfmts);
 %loadfmtCAS(work, mailfmts);
