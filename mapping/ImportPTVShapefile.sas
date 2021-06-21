@@ -9,6 +9,9 @@ that are within 500m of a train station
 The imported shapefile can be used as a custom polygon provider for geo maps in VA,
 and the location records overlayed.
 
+Note - you need to upload the .shp, .shx, and .dbf files together in the same folder on the server
+filesystem before running this
+
 **/
 
 cas;
